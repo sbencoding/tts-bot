@@ -7,7 +7,12 @@ const manageGuildPermission = 'MANAGE_GUILD';
 const commandLookupTable = {
     'ping': cmdPing,
     'config': cmdConfig,
+    'join': cmdJoin,
+    'leave': cmdLeave,
 };
+
+let inVoiceChannel = false;
+let currentVoiceChannel = '';
 
 client.on('ready', () => {
     console.log('TTS Bot is connected to the server');
@@ -98,6 +103,44 @@ function cmdConfig(msg, args) {
         // Mode is invalid for config command
         msg.channel.send('Error, invalid mode for `config` command');
     }
+}
+
+function cmdJoin(msg) {
+    if (!msg.guild) return;
+    if (!msg.member.voiceChannel) {
+        msg.channel.send(`<@${msg.member.id}>, you're not in a voice channel`);
+        return;
+    }
+    if (inVoiceChannel) {
+        msg.channel.send(`@${msg.member.displayName}, I'm already in a voice channel`);
+        return;
+    }
+
+    msg.member.voiceChannel.join().then(connection => {
+        currentVoiceChannel = msg.member.voiceChannel.id;
+        inVoiceChannel = true;
+        console.log('Connected to voice channel');
+    })
+}
+
+function cmdLeave(msg) {
+    if (!msg.guild) return;
+    if (!msg.member.voiceChannel) {
+        msg.channel.send(`<@${msg.member.id}>, you're not in a voice channel`);
+        return;
+    }
+    if (!inVoiceChannel) {
+        msg.channel.send(`@${msg.member.displayName}, I'm not in a voice channel`);
+        return;
+    }
+    if (currentVoiceChannel !== msg.member.voiceChannel.id) {
+        msg.channel.send(`@${msg.member.displayName}, we're not in the same voice channel`);
+        return;
+    }
+    msg.member.voiceChannel.leave();
+    inVoiceChannel = false;
+    currentVoiceChannel = '';
+    console.log('Left voice channel');
 }
 
 settings.loadSettings(settingsFile);
