@@ -1,10 +1,12 @@
 const discord = require('discord.js');
-const client = new discord.Client();
 const settings = require('./settings');
 
+const client = new discord.Client();
 const settingsFile = './config.json';
+const manageGuildPermission = 'MANAGE_GUILD';
 const commandLookupTable = {
     'ping': cmdPing,
+    'config': cmdConfig,
 };
 
 client.on('ready', () => {
@@ -52,6 +54,50 @@ function parseCommand(msgContent) {
 
 function cmdPing(msg) {
     msg.channel.send('Pong!');
+}
+
+function cmdConfig(msg, args) {
+    if (args.length === 0) {
+        // 0 Arguments given to the config command
+        msg.channel.send('Error, the `config` command takes either 2 or 3 arguments, but 0 was given!');
+        return;
+    }
+    // Either get or set
+    const mode = args[0];
+    if (mode === 'get') {
+        // Get a value from the config file
+        if (args.length !== 2) {
+            // Name of the option not given, or too many arguments
+            msg.channel.send('Error, `config get` takes one argument, the name of the setting to get!');
+            return;
+        }
+        const val = settings.getValue(args[1]);
+        msg.channel.send(`The value of \`${args[1]}\` is \`${val}\``);
+    } else if (mode === 'set') {
+        // Set a value in the config file
+        if (args.length !== 3) {
+            // Name and value of the option not given, or too many arguments
+            msg.channel.send('Error, `config set` takes two arguments, the name of the option and the value to set it to!');
+            return;
+        }
+        // Check permission of the sender (Manage Guild)
+        const user = msg.member;
+        const canConfig = user.permissions.has(manageGuildPermission);
+        if (canConfig) {
+            // Sender has permission
+            const configName = args[1];
+            const configValue = args[2];
+            settings.setValue(configName, configValue);
+            msg.channel.send(`Success! Set \`${configName}\` to \`${configValue}\``);
+            settings.saveSettings(settingsFile);
+        } else {
+            // Insufficient permissions
+            msg.channel.send('Sorry, you don\'t have the required permissions to configure this bot.');
+        }
+    } else {
+        // Mode is invalid for config command
+        msg.channel.send('Error, invalid mode for `config` command');
+    }
 }
 
 settings.loadSettings(settingsFile);
