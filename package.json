@@ -15,7 +15,8 @@
   "author": "sbencoding",
   "license": "MIT",
   "dependencies": {
-    "discord.js": "^11.5.1",
-    "node-opus": "^0.3.2"
+    "discord.js": "git+https://github.com/discordjs/discord.js.git#d7b2146c81d401d0fdefd8ec040a54dfce6067e5",
+    "node-opus": "^0.3.2",
+    "request": "^2.88.0"
   }
 }
