@@ -16,7 +16,9 @@
   "license": "MIT",
   "dependencies": {
     "discord.js": "git+https://github.com/discordjs/discord.js.git#d7b2146c81d401d0fdefd8ec040a54dfce6067e5",
+    "ffmpeg-static": "^2.4.0",
     "node-opus": "^0.3.2",
+    "puppeteer": "^1.18.0",
     "request": "^2.88.0"
   }
 }

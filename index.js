@@ -1,9 +1,10 @@
 const discord = require('discord.js');
 const settings = require('./settings');
-const audioQueue = require('./queue');
+const queue = require('./queue');
 const tts = require('./ttsApi');
 
 const client = new discord.Client();
+const audioQueue = new queue.Queue();
 const settingsFile = './config.json';
 const manageGuildPermission = 'MANAGE_GUILD';
 const commandLookupTable = {
@@ -12,6 +13,7 @@ const commandLookupTable = {
     'join': cmdJoin,
     'leave': cmdLeave,
     'tts': cmdTts,
+    'trs': cmdTrs,
 };
 
 let inVoiceChannel = false;
@@ -23,7 +25,7 @@ client.on('ready', () => {
 
 client.on('message', (msg) => {
     if (!isCommand(msg.content)) return;
-    const {command, args} = parseCommand(msg.content);
+    const { command, args } = parseCommand(msg.content);
     const cmdHandler = commandLookupTable[command];
     if (cmdHandler === undefined) {
         // Command doesn't exist
@@ -139,13 +141,13 @@ function cmdJoin(msg) {
     }
     // Check if bot is connected to a voice channel
     if (inVoiceChannel) {
-        msg.channel.send(`@${msg.member.displayName}, I'm already in a voice channel`);
+        msg.channel.send(`@${msg.member.id}, I'm already in a voice channel`);
         return;
     }
     // Check if we have permission to join and play audio
     const grantedPermissions = msg.member.voice.channel.permissionsFor(msg.client.user)
     if (!grantedPermissions.has('SPEAK') || !grantedPermissions.has('CONNECT')) {
-        msg.channel.send(`@${msg.member.displayName}, I need join and speak permissions to this channel first!`);
+        msg.channel.send(`@${msg.member.id}, I need join and speak permissions to this channel first!`);
         return;
     }
 
@@ -186,13 +188,13 @@ function cmdLeave(msg) {
         return;
     }
     // Check if bot is connected to a voice channel
-    if (inVoiceChannel) {
-        msg.channel.send(`@${msg.member.displayName}, I'm already in a voice channel`);
+    if (!inVoiceChannel) {
+        msg.channel.send(`@${msg.member.id}, I'm not in a voice channel`);
         return;
     }
     // Check if sender is in the same voice channel
     if (currentVoiceChannel !== msg.member.voice.channelID) {
-        msg.channel.send(`@${msg.member.displayName}, we're not in the same voice channel`);
+        msg.channel.send(`@${msg.member.id}, we're not in the same voice channel`);
         return;
     }
     msg.member.voice.channel.leave();
@@ -217,12 +219,12 @@ async function cmdTts(msg, args) {
     }
     // Check if bot is connected to a voice channel
     if (!inVoiceChannel) {
-        msg.channel.send(`@${msg.member.displayName}, I'm not in a voice channel`);
+        msg.channel.send(`@${msg.member.id}, I'm not in a voice channel`);
         return;
     }
     // Check if sender is in the same voice channel
     if (currentVoiceChannel !== msg.member.voice.channelID) {
-        msg.channel.send(`@${msg.member.displayName}, we're not in the same voice channel`);
+        msg.channel.send(`@${msg.member.id}, we're not in the same voice channel`);
         return;
     }
     // Check if the argument count is correct
@@ -230,9 +232,40 @@ async function cmdTts(msg, args) {
         msg.channel.send('Invalid arguments for `tts` command');
         return;
     }
-    
+
     const ttsUrl = await tts.getTTSUrl(args.splice(1, args.length - 1).join(' '), args[0]);
     audioQueue.push(ttsUrl);
+}
+
+async function cmdTrs(msg, args) {
+    // Check if Message comes from server
+    if (!msg.guild) return;
+    // Check if sender is connected to voice channel
+    if (!msg.member.voice.channel) {
+        msg.channel.send(`<@${msg.member.id}>, you're not in a voice channel`);
+        return;
+    }
+    // Check if bot is connected to a voice channel
+    if (!inVoiceChannel) {
+        msg.channel.send(`@${msg.member.id}, I'm not in a voice channel`);
+        return;
+    }
+    // Check if sender is in the same voice channel
+    if (currentVoiceChannel !== msg.member.voice.channelID) {
+        msg.channel.send(`@${msg.member.id}, we're not in the same voice channel`);
+        return;
+    }
+    // Check if the argument count is correct
+    if (args.length < 3) {
+        msg.channel.send('Invalid arguments for `tts` command');
+        return;
+    }
+
+    const trsUrl = await tts.getTRSUrl(args[0], args[1], args.splice(2, args.length - 2).join(' '));
+    if (trsUrl !== undefined) audioQueue.push(trsUrl);
+    else {
+        msg.channel.send(`<@${msg.member.id}>, one or both of the language codes are incorrect!`);
+    }
 }
 
 settings.loadSettings(settingsFile);
