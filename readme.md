@@ -29,9 +29,10 @@ After that you can use `!help` to get a list of available commands and arguments
 The translate command (`!trs`) uses language codes for the origin and target language. The text translate (`!tr`) command uses the same codes.  
 These codes follow the [ISO 639-1 format](https://en.wikipedia.org/wiki/ISO_639-1).  
 The tts command (`!tts`) uses a TTS voice in the first argument. The voice can be one of the following voice names:
+
 | Voice name | Voice language|
-|------------|---------------|
-|Zeina | Arabic|
+| ------------ | --------------- |
+| Zeina | Arabic |
 |Nicole | Australian English|
 |Russell | Australian English|
 |Ricardo | Brazilian Portuguese|
