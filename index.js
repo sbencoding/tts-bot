@@ -134,47 +134,65 @@ function cmdConfig(msg, args) {
  * Handle the join command
  * @param {discord.Message} msg The current message
  */
-function cmdJoin(msg) {
-    // Check if Message comes from server
-    if (!msg.guild) return;
-    // Check if sender is connected to voice channel
-    if (!msg.member.voice.channel) {
-        msg.channel.send(`<@${msg.member.id}>, you're not in a voice channel`);
-        return;
-    }
-    // Check if bot is connected to a voice channel
-    if (inVoiceChannel) {
-        msg.channel.send(`@${msg.member.id}, I'm already in a voice channel`);
-        return;
-    }
-    // Check if we have permission to join and play audio
-    const grantedPermissions = msg.member.voice.channel.permissionsFor(msg.client.user)
-    if (!grantedPermissions.has('SPEAK') || !grantedPermissions.has('CONNECT')) {
-        msg.channel.send(`@${msg.member.id}, I need join and speak permissions to this channel first!`);
-        return;
-    }
+async function cmdJoin(msg) {
+    await _join(msg);
+}
 
-    let audioPlayer;
-    msg.member.voice.channel.join().then(async (connection) => {
-        currentVoiceChannel = msg.member.voice.channelID;
-        inVoiceChannel = true;
-        console.log('Connected to voice channel');
-        /**
-         * Wait until the end of the audio stream
-         * @param {discord.StreamDispatcher} currentPlayer The current voice connection to the server
-         */
-        const waitUntilEnd = (currentPlayer) => {
-            return new Promise((resolve) => {
-                currentPlayer.on('end', () => resolve());
-            });
-        };
-
-        while (inVoiceChannel) {
-            const audioUrl = await audioQueue.getNext();
-            if (!inVoiceChannel || audioUrl === undefined) break;
-            audioPlayer = connection.play(audioUrl);
-            await waitUntilEnd(audioPlayer);
+/**
+ * Join the voice channel of the sender
+ * @param {discord.Message} msg The current message
+ */
+function _join(msg) {
+    return new Promise((resolve, reject) => {
+        // Check if Message comes from server
+        if (!msg.guild) {
+            reject();
+            return;
         }
+        // Check if sender is connected to voice channel
+        if (!msg.member.voice.channel) {
+            msg.channel.send(`<@${msg.member.id}>, you're not in a voice channel`);
+            reject();
+            return;
+        }
+        // Check if bot is connected to a voice channel
+        if (inVoiceChannel) {
+            msg.channel.send(`<@${msg.member.id}>, I'm already in a voice channel`);
+            reject();
+            return;
+        }
+    
+        // Check if we have permission to join and play audio
+        const grantedPermissions = msg.member.voice.channel.permissionsFor(msg.client.user)
+        if (!grantedPermissions.has('SPEAK') || !grantedPermissions.has('CONNECT')) {
+            msg.channel.send(`<@${msg.member.id}>, I need join and speak permissions to this channel first!`);
+            reject();
+            return;
+        }
+    
+        let audioPlayer;
+        msg.member.voice.channel.join().then(async (connection) => {
+            resolve();
+            currentVoiceChannel = msg.member.voice.channelID;
+            inVoiceChannel = true;
+            console.log('Connected to voice channel');
+            /**
+             * Wait until the end of the audio stream
+             * @param {discord.StreamDispatcher} currentPlayer The current voice connection to the server
+             */
+            const waitUntilEnd = (currentPlayer) => {
+                return new Promise((resolve) => {
+                    currentPlayer.on('end', () => resolve());
+                });
+            };
+    
+            while (inVoiceChannel) {
+                const audioUrl = await audioQueue.getNext();
+                if (!inVoiceChannel || audioUrl === undefined) break;
+                audioPlayer = connection.play(audioUrl);
+                await waitUntilEnd(audioPlayer);
+            }
+        });
     });
 }
 
@@ -192,12 +210,12 @@ function cmdLeave(msg) {
     }
     // Check if bot is connected to a voice channel
     if (!inVoiceChannel) {
-        msg.channel.send(`@${msg.member.id}, I'm not in a voice channel`);
+        msg.channel.send(`<@${msg.member.id}>, I'm not in a voice channel`);
         return;
     }
     // Check if sender is in the same voice channel
     if (currentVoiceChannel !== msg.member.voice.channelID) {
-        msg.channel.send(`@${msg.member.id}, we're not in the same voice channel`);
+        msg.channel.send(`<@${msg.member.id}>, we're not in the same voice channel`);
         return;
     }
     msg.member.voice.channel.leave();
@@ -213,21 +231,17 @@ function cmdLeave(msg) {
  * @param {Array} args The given arguments
  */
 async function cmdTts(msg, args) {
-    // Check if Message comes from server
-    if (!msg.guild) return;
-    // Check if sender is connected to voice channel
-    if (!msg.member.voice.channel) {
-        msg.channel.send(`<@${msg.member.id}>, you're not in a voice channel`);
-        return;
-    }
     // Check if bot is connected to a voice channel
     if (!inVoiceChannel) {
-        msg.channel.send(`@${msg.member.id}, I'm not in a voice channel`);
-        return;
+        try {
+            await _join(msg);
+        } catch (_) {
+            return;
+        }
     }
     // Check if sender is in the same voice channel
     if (currentVoiceChannel !== msg.member.voice.channelID) {
-        msg.channel.send(`@${msg.member.id}, we're not in the same voice channel`);
+        msg.channel.send(`<@${msg.member.id}>, we're not in the same voice channel`);
         return;
     }
     // Check if the argument count is correct
@@ -246,21 +260,16 @@ async function cmdTts(msg, args) {
  * @param {Array} args The give arguments
  */
 async function cmdTrs(msg, args) {
-    // Check if Message comes from server
-    if (!msg.guild) return;
-    // Check if sender is connected to voice channel
-    if (!msg.member.voice.channel) {
-        msg.channel.send(`<@${msg.member.id}>, you're not in a voice channel`);
-        return;
-    }
-    // Check if bot is connected to a voice channel
     if (!inVoiceChannel) {
-        msg.channel.send(`@${msg.member.id}, I'm not in a voice channel`);
-        return;
+        try {
+            await _join(msg);
+        } catch (_) {
+            return;
+        }
     }
     // Check if sender is in the same voice channel
     if (currentVoiceChannel !== msg.member.voice.channelID) {
-        msg.channel.send(`@${msg.member.id}, we're not in the same voice channel`);
+        msg.channel.send(`<@${msg.member.id}>, we're not in the same voice channel`);
         return;
     }
     // Check if the argument count is correct
