@@ -2,6 +2,7 @@ const discord = require('discord.js');
 const settings = require('./settings');
 const queue = require('./queue');
 const tts = require('./ttsApi');
+const translate = require('./translateApi');
 
 const client = new discord.Client();
 const audioQueue = new queue.Queue();
@@ -14,6 +15,8 @@ const commandLookupTable = {
     'leave': cmdLeave,
     'tts': cmdTts,
     'trs': cmdTrs,
+    'tr': cmdTr,
+    'help': cmdHelp,
 };
 
 let inVoiceChannel = false;
@@ -237,6 +240,11 @@ async function cmdTts(msg, args) {
     audioQueue.push(ttsUrl);
 }
 
+/**
+ * Handle the trs command
+ * @param {discord.Message} msg The current message
+ * @param {Array} args The give arguments
+ */
 async function cmdTrs(msg, args) {
     // Check if Message comes from server
     if (!msg.guild) return;
@@ -266,6 +274,43 @@ async function cmdTrs(msg, args) {
     else {
         msg.channel.send(`<@${msg.member.id}>, one or both of the language codes are incorrect!`);
     }
+}
+
+/**
+ * Handle the tr command
+ * @param {discord.Message} msg The current message
+ * @param {Array} args The give arguments
+ */
+async function cmdTr(msg, args) {
+    if (args.length < 3) {
+        msg.channel.send('Invalid arguments for command `tr`');
+        return;
+    }
+    const langFrom = args[0];
+    const langTo = args[1];
+    const text = args.splice(2, args.length - 2).join(' ');
+    const result = await translate.getTextResult(langFrom, langTo, text);
+    const header = `[Translated message from ${msg.member.displayName}]: `;
+    
+    if (msg.deletable) msg.delete();
+    msg.channel.send(header + result);
+}
+
+/**
+ * Handle the help command
+ * @param {discord.Message} msg The current message
+ */
+function cmdHelp(msg) {
+    let helpText = '';
+    helpText += '`help` - display this menu\n';
+    helpText += '`ping` - ping the bot, should respond with pong\n';
+    helpText += '`config` [get/set] [option name] [option value] - get or set configuration options, requires Manage Guild permission\n';
+    helpText += '`join` - join a voice channel\n';
+    helpText += '`leave` - leave the current voice channel\n';
+    helpText += '`tts` [Voice] [text] - speak the given text in the current voice channel\n';
+    helpText += '`trs` [language from] [language to] [text] - translate the given text and read it in the current voice channel\n';
+    helpText += '`tr` [language from] [language to] [text] - translate the text and send to origin text channel\n';
+    msg.member.send(helpText);
 }
 
 settings.loadSettings(settingsFile);
