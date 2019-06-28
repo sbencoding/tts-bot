@@ -4,6 +4,12 @@ const queue = require('./queue');
 const trsQueue = new queue.Queue();
 let trsQueueRunning = false;
 
+/**
+ * Translate the given text
+ * @param {String} langFrom The language code to translate from
+ * @param {String} langTo The langugage code to translate to
+ * @param {String} text The text to translate
+ */
 function getTextResult(langFrom, langTo, text) {
     return new Promise((resolve) => {
         if (!trsQueueRunning) {

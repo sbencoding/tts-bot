@@ -46,6 +46,9 @@ class Queue {
         this.eventEmitter.emit('queue-updated');
     }
     
+    /**
+     * Get the number of items in the queue
+     */
     length() {
         return this.q.length;
     }
